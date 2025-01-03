@@ -3,10 +3,10 @@ const {hash} = require("bcrypt");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-const register = async (req, res) => {
-    const {email, password, firstName, lastName, phone, agencyId} = req.body;
+async function register(req, res)   {
+    const {email, password, firstName, lastName, phone} = req.body;
 
-    if (!email || !password || !firstName || !lastName || !phone || !agencyId) {
+    if (!email || !password || !firstName || !lastName || !phone ) {
         return res.status(400).json({message: "All fields are required."});
     }
 
@@ -23,7 +23,6 @@ const register = async (req, res) => {
             email,
             phone,
             password: hashedPassword,
-            agencyId,
             createdAt: new Date(),
         };
         const newLibrarian = await db.collection("librarians").add(librarianData);
@@ -34,7 +33,7 @@ const register = async (req, res) => {
     }
 }
 
-const login = async (req, res) => {
+async function login(req, res){
     const {email, password} = req.body;
 
     if (!email || !password) {
@@ -58,7 +57,7 @@ const login = async (req, res) => {
         }
 
         const token = jwt.sign(
-            { id: librarianDoc.id, email: librarian.email, agencyId: librarian.agencyId },
+            { id: librarianDoc.id, email: librarian.email},
             process.env.JWT_SECRET || "your_secret_key",
             { expiresIn: "1h" }
         );
