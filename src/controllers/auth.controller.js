@@ -10,6 +10,16 @@ async function register(req, res)   {
         return res.status(400).json({message: "All fields are required."});
     }
 
+    if (!validatePhoneNumber(phone)) {
+        return res.status(400).json({ message: "Invalid phone number format." });
+    }
+
+    if (!validatePassword(password)) {
+        return res.status(400).json({
+            message: "Password must be at least 8 characters long, contain at least one uppercase letter, one number, and one special character."
+        });
+    }
+
     try {
         const existingUser = await db.collection("librarians").where("email", "==", email).get();
         if (!existingUser.empty) {
@@ -68,5 +78,16 @@ async function login(req, res){
     }
 
 }
+
+function validatePassword(password) {
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+    return passwordRegex.test(password);
+}
+
+function validatePhoneNumber(phone) {
+    const phoneRegex = /^\+?[1-9]\d{9,14}$/;
+    return phoneRegex.test(phone);
+}
+
 
 module.exports = { register, login };
