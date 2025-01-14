@@ -26,7 +26,7 @@ async function fetchBooks(criteria) {
         const { data } = await axios.get(url);
         return data.items || [];
     } catch (error) {
-        console.error("Error fetching books:", error);
+        console.error("Error fetching books:", error.message);
         return [];
     }
 }
@@ -38,36 +38,39 @@ async function saveBooks(booksData) {
         const booksCollection = db.collection("books");
 
         for (const book of booksData) {
-            const identifiers = book.volumeInfo.industryIdentifiers || [];
-            if (!identifiers.length) {
-                console.log(`Skipping book: ${book.volumeInfo.title || "Unknown Title"} - Missing identifiers`);
-                continue;
-            }
+                const identifiers = book.volumeInfo?.industryIdentifiers || [];
+                if (!identifiers.length) {
+                    console.log(`Skipping book: ${book.volumeInfo?.title || "Unknown Title"} - Missing identifiers`);
+                    continue;
+                }
+                const bookId = book.id;
 
-            const identifier = identifiers[0].identifier;
-            const existingBookSnapshot = await booksCollection
-                .where("volumeInfo.industryIdentifiers.identifier", "==", identifier)
-                .get();
+                const existingBookSnapshot = await booksCollection
+                    .where("bookId", "==", bookId)
+                    .get();
 
-            if (!existingBookSnapshot.empty) {
-                const doc = existingBookSnapshot.docs[0];
-                await doc.ref.update({
-                    numberOfCopies: (doc.data().numberOfCopies || 0) + 1,
-                    numberOfAvailable: (doc.data().numberOfAvailable || 0) + 1,
-                });
-                console.log(`Book with identifier ${identifier} already exists. Incremented copies.`);
-            } else {
-                await booksCollection.add({
-                    ...book,
-                    numberOfCopies: 1,
-                    numberOfAvailable: 1,
-                    dateAdded: Date.now(),
-                });
-                console.log(`Added new book: ${book.volumeInfo.title || "Unknown Title"}`);
+                if (!existingBookSnapshot.empty) {
+                    const doc = existingBookSnapshot.docs[0];
+                    await doc.ref.update({
+                        numberOfCopies: (doc.data().numberOfCopies || 0) + 1,
+                        numberOfAvailable: (doc.data().numberOfAvailable || 0) + 1,
+                    });
+                    console.log(`Book with bookId ${bookId} already exists. Incremented copies.`);
+                } else{
+                    const bookRef = booksCollection.doc();
+                    await bookRef.set({
+                        id: bookRef.id,
+                        bookId: bookId,
+                        ...book,
+                        numberOfCopies: 1,
+                        numberOfAvailable: 1,
+                        dateAdded: Date.now(),
+                    });
+                    console.log(`Added new book: ${book.volumeInfo?.title || "Unknown Title"} |  Firestore ID ${bookRef.id} | GoogleBooks ID ${bookId}`);
+                }
             }
-        }
     } catch (error) {
-        console.error("Error saving books to Firestore:", error);
+        console.error("Error saving books to Firestore:", error.message);
     }
 }
 
@@ -87,7 +90,7 @@ async function addBooks(req, res) {
         await fetchAndSaveBooks(bookData);
         res.status(200).json({ message: "Books fetched and saved successfully" });
     } catch (error) {
-        console.error("Error in addBooks function:", error);
+        console.error("Error in addBooks function:", error.message);
         res.status(500).send(error.message || "An unknown error occurred.");
     }
 }
