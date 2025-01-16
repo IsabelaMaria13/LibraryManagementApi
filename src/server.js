@@ -7,6 +7,8 @@ require("./database/firebase");
 const authRouter = require("./routes/auth.routes");
 const booksRouter = require("./routes/books.routes");
 const listBooks = require("./routes/list.routes");
+const usersRouter = require("./routes/users.routes");
+const checkoutRouter = require("./routes/check-out.routes");
 const verifyToken = require("./middleware/auth.middleware");
 
 const PORT = process.env.PORT || 3000;
@@ -20,6 +22,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/auth", authRouter);
 app.use("/books", verifyToken, booksRouter);
 app.use("/list", verifyToken, listBooks);
+app.use("/api", usersRouter);
+app.use("/checkout", checkoutRouter);
 
 
 
