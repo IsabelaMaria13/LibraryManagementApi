@@ -11,6 +11,10 @@ const db = admin.firestore();
 
 async function generateUsers(count = 50) {
     const users = [];
+    const dateOfBirth = faker.date.birthdate({ min: 18, max: 65, mode: 'age' });
+    const formattedDateOfBirth = dateOfBirth.toISOString().split('T')[0];
+    const registeredAt = faker.date.past({ years: 5 });
+    const formattedRegisteredAt = registeredAt.toISOString().split('T')[0];
     for (let i = 0; i < count; i++) {
         users.push({
             userId: faker.string.uuid(),
@@ -24,8 +28,8 @@ async function generateUsers(count = 50) {
                 country: faker.location.country(),
                 postcode: faker.location.zipCode(),
             },
-            dateOfBirth: faker.date.birthdate({min: 18, max: 65, mode: 'age'}),
-            registeredAt: faker.date.past({years: 5}),
+            dateOfBirth: formattedDateOfBirth,
+            registeredAt:formattedRegisteredAt,
 
         });
     }
@@ -42,6 +46,6 @@ async function generateUsers(count = 50) {
         console.error('Error uploading users to Firestore:', error);
     }
 }
-generateUsers(50).then(() => console.log("Finished generating users"));
+// generateUsers(50).then(() => console.log("Finished generating users"));
 
 module.exports = { db };

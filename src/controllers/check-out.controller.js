@@ -18,7 +18,7 @@ async function checkoutBook(req, res) {
                 throw new Error('User not found.');
             }
             const userDoc = userSnapshot.docs[0];
-            const userId = userDoc.id;
+            const user = userDoc.data();
 
             const bookSnapshot = await transaction.get(booksRef.where('bookId', '==', googleBookId));
             if (bookSnapshot.empty) {
@@ -35,8 +35,9 @@ async function checkoutBook(req, res) {
             const dueDate = new Date(checkoutDate.getTime() + (30 * 24 * 60 * 60 * 1000));
 
             transaction.set(checkoutsRef, {
-                userId,
-                googleBookId,
+                userName: user.name,
+                bookId: bookData.bookId,
+                bookTitle: bookData.title,
                 checkoutDate,
                 dueDate,
                 returned: false,
