@@ -8,6 +8,7 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
+db.settings({ ignoreUndefinedProperties: true });
 
 async function generateUsers(count = 50) {
     const users = [];

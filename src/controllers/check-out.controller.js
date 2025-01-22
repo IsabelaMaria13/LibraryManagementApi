@@ -32,14 +32,18 @@ async function checkoutBook(req, res) {
             }
 
             const checkoutDate = new Date();
-            const dueDate = new Date(checkoutDate.getTime() + (30 * 24 * 60 * 60 * 1000));
+            const dueDate = new Date();
+            dueDate.setDate(checkoutDate.getDate() + 30);
+
+            const formattedCheckoutDate = checkoutDate.toISOString().split('T')[0];
+            const formattedDueDate = dueDate.toISOString().split('T')[0];
 
             transaction.set(checkoutsRef, {
                 userName: user.name,
                 bookId: bookData.bookId,
                 bookTitle: bookData.title,
-                checkoutDate,
-                dueDate,
+                checkoutDate: formattedCheckoutDate,
+                dueDate: formattedDueDate,
                 returned: false,
             });
 
