@@ -24,8 +24,8 @@ app.use("/auth", authRouter);
 app.use("/books", verifyToken, booksRouter);
 app.use("/list", verifyToken, listBooks);
 app.use("/api", usersRouter);
-app.use("/checkout", checkoutRouter);
-app.use("/checkIn", checkInRouter);
+app.use("/checkout", verifyToken, checkoutRouter);
+app.use("/checkIn", verifyToken, checkInRouter);
 
 
 

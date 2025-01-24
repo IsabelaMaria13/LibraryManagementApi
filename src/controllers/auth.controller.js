@@ -79,6 +79,53 @@ async function login(req, res){
 
 }
 
+async function profile(req, res){
+    const librarianId = req.params.id;
+    try {
+        const doc = await db.collection("librarians").doc(librarianId).get();
+        if (!doc.exists) {
+            return res.status(404).send("Librarian not found.");
+        }
+        return res.status(200).json(doc.data());
+
+    }catch (error){
+        console.error("Error fetching librarian profile:", error);
+        return res.status(500).send(error.message);
+    }
+}
+
+async function changePassword(req, res){
+    const {librarianId, oldPassword, newPassword} = req.body;
+    try {
+        const doc = await db.collection("librarians").doc(librarianId).get();
+        if (!doc.exists) {
+            return res.status(404).send("Librarian not found.");
+        }
+
+        const librarianInfo = doc.data()
+        const isMatch = await bcrypt.compare(oldPassword, librarianInfo.password);
+        if (!isMatch) {
+            return res.status(401).send( 'Old password does not match.');
+        }
+
+        if (!validatePassword(newPassword)) {
+            return res.status(400).json({
+                message: "Password must be at least 8 characters long, contain at least one uppercase letter, one number, and one special character."
+            });
+        }
+
+        const hashedPassword = await hash(newPassword, 10);
+        await db.collection("librarians").doc(librarianId).update({
+            password: hashedPassword,
+        });
+        return res.status(200).send("Password updated successfully.");
+
+    }catch (error){
+        console.error("Error changing password:", error);
+        return res.status(500).send(error.message);
+    }
+}
+
 function validatePassword(password) {
     const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
     return passwordRegex.test(password);
@@ -90,4 +137,4 @@ function validatePhoneNumber(phone) {
 }
 
 
-module.exports = { register, login };
+module.exports = { register, login, profile, changePassword };
