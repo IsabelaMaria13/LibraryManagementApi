@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-const autenticate = (req, res, next) => {
+const authMiddleware = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -9,11 +9,11 @@ const autenticate = (req, res, next) => {
     }
 
     try {
-        req.user = jwt.verify(token, process.env.JWT_SECRET || 'your_secret_key');
+        req.user = jwt.verify(token, process.env.JWT_SECRET);
         next();
     } catch (error) {
         return res.status(403).json({ message: 'Invalid or expired token.' });
     }
 };
 
-module.exports = autenticate;
+module.exports = authMiddleware;

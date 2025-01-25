@@ -37,10 +37,10 @@ async function updateBook(req, res) {
             return res.status(404).json({ message: "Book not found." });
         }
 
-        snapshot.forEach(async (doc) => {
+        for (const doc of snapshot.docs) {
             const bookRef = db.collection("books").doc(doc.id);
             await bookRef.update(updates);
-        });
+        }
 
         console.log(`Book(s) with ID ${bookId} updated successfully.`);
         return res.status(200).json({ message: "Book updated successfully." });
@@ -50,7 +50,34 @@ async function updateBook(req, res) {
     }
 }
 
+async function deleteBook(req, res) {
+    const bookId = req.params.id;
+
+    try {
+        const bookQuerySnapshot = await db.collection("books").where("id", "==", bookId).get();
+        if (bookQuerySnapshot.empty) {
+            console.error(`Book with ID ${bookId} not found in Firestore.`);
+            return res.status(404).json({ message: "Book not found." });
+        }
+
+        const loanQuerySnapshot = await db.collection("loans").where("bookId", "==", bookId).get();
+        if (!loanQuerySnapshot.empty) {
+            console.error(`Cannot delete book with ID ${bookId} because it has associated loans.`);
+            return res.status(400).json({ message: "Cannot delete book because it has associated loans." });
+        }
+
+        for (const doc of bookQuerySnapshot.docs) {
+            const bookRef = db.collection("books").doc(doc.id);
+            await bookRef.delete();
+        }
+
+        console.log(`Book with ID ${bookId} deleted successfully.`);
+        return res.status(200).json({ message: "Book deleted successfully." });
+    } catch (error) {
+        console.error("Error deleting book:", error.message);
+        return res.status(500).json({ message: "An error occurred while deleting the book." });
+    }
+}
 
 
-
-module.exports = {getBooks, updateBook};
+module.exports = { getBooks, updateBook, deleteBook };
