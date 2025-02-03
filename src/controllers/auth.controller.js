@@ -68,7 +68,7 @@ async function login(req, res){
 
         const token = jwt.sign(
             { id: librarianDoc.id, email: librarian.email},
-            process.env.JWT_SECRET || "your_secret_key",
+            process.env.JWT_SECRET,
             { expiresIn: "1h" }
         );
 

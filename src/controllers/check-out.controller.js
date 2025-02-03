@@ -9,7 +9,6 @@ async function checkoutBook(req, res) {
 
     const usersRef = db.collection('users');
     const booksRef = db.collection('books');
-    const checkoutsRef = db.collection('loans').doc();
 
     try {
         await db.runTransaction(async (transaction) => {
@@ -18,7 +17,6 @@ async function checkoutBook(req, res) {
                 throw new Error('User not found.');
             }
             const userDoc = userSnapshot.docs[0];
-            const user = userDoc.data();
 
             const bookSnapshot = await transaction.get(booksRef.where('bookId', '==', googleBookId));
             if (bookSnapshot.empty) {
@@ -38,13 +36,14 @@ async function checkoutBook(req, res) {
             const formattedCheckoutDate = checkoutDate.toISOString().split('T')[0];
             const formattedDueDate = dueDate.toISOString().split('T')[0];
 
-            transaction.set(checkoutsRef, {
-                userName: user.name,
+            const loanRef = userDoc.ref.collection('loans').doc();
+            transaction.set(loanRef, {
                 bookId: bookData.bookId,
                 bookTitle: bookData.title,
+                author: bookData.author,
                 checkoutDate: formattedCheckoutDate,
                 dueDate: formattedDueDate,
-                returned: false,
+                returned: false
             });
 
             transaction.update(bookDoc.ref, {

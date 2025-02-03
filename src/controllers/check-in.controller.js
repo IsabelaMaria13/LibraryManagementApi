@@ -9,8 +9,6 @@ async function checkInBook(req, res) {
 
     try {
         await db.runTransaction(async (transaction) => {
-            const booksRef = db.collection('books');
-            const checkoutsRef = db.collection('loans');
 
             for (const loan of selectedLoans) {
                 const { googleBookId, userName } = loan;
@@ -19,23 +17,27 @@ async function checkInBook(req, res) {
                     throw new Error(`Invalid loan data: ${JSON.stringify(loan)}`);
                 }
 
-                const bookSnapshot = await transaction.get(booksRef.where('bookId', '==', googleBookId));
+                const userRef = db.collection('users').where('name', '==', userName);
+                const userSnapshot = await transaction.get(userRef);
+                if (userSnapshot.empty) {
+                    throw new Error(`User ${userName} not found.`);
+                }
+                const userDoc = userSnapshot.docs[0];
+
+                const bookRef = db.collection('books').where('bookId', '==', googleBookId);
+                const bookSnapshot = await transaction.get(bookRef);
                 if (bookSnapshot.empty) {
                     throw new Error(`Book with Google Book ID ${googleBookId} not found.`);
                 }
                 const bookDoc = bookSnapshot.docs[0];
-                const bookData = bookDoc.data();
 
-                const checkoutSnapshot = await transaction.get(
-                    checkoutsRef
-                        .where('bookId', '==', googleBookId)
-                        .where('userName', '==', userName)
-                );
-                if (checkoutSnapshot.empty) {
+                const loanRef = userDoc.ref.collection('loans').where('bookId', '==', googleBookId).where('returned', '==', false);
+                const loanSnapshot = await transaction.get(loanRef);
+                if (loanSnapshot.empty) {
                     throw new Error(`No active loan found for book ID ${googleBookId} and user ${userName}.`);
                 }
 
-                checkoutSnapshot.docs.forEach(doc => {
+                loanSnapshot.docs.forEach(doc => {
                     transaction.update(doc.ref, {
                         returned: true,
                         returnDate: admin.firestore.Timestamp.now(),
@@ -43,7 +45,7 @@ async function checkInBook(req, res) {
                 });
 
                 transaction.update(bookDoc.ref, {
-                    numberOfAvailable: bookData.numberOfAvailable + checkoutSnapshot.size,
+                    numberOfAvailable: bookDoc.data().numberOfAvailable + 1,
                 });
             }
         });
@@ -58,30 +60,32 @@ async function checkInBook(req, res) {
 
 async function getLoans(req, res) {
     try {
-        const loansRef = db.collection('loans');
-        const loansSnapshot = await loansRef.get();
+        const usersRef = db.collection('users');
+        const usersSnapshot = await usersRef.get();
+        const loansData = [];
 
-        if (loansSnapshot.empty) {
-            return res.status(404).json({ message: 'No loans found.' });
-        }
 
-        const loansData = loansSnapshot.docs
-            .filter(loanDoc => {
+        const loansPromises = usersSnapshot.docs.map(userDoc =>
+            userDoc.ref.collection('loans').where('returned', '==', false).get()
+        );
+
+        const results = await Promise.all(loansPromises);
+
+        results.forEach((loansSnapshot, index) => {
+            const userDoc = usersSnapshot.docs[index];
+            loansSnapshot.forEach(loanDoc => {
                 const loan = loanDoc.data();
-                return loan.returned === false;
-            })
-            .map(loanDoc => {
-            const loan = loanDoc.data();
-            return {
-                loanId: loanDoc.id,
-                bookName: loan.bookTitle || 'Unknown',
-                bookId: loan.bookId || 'Unknown',
-                userName: loan.userName || 'Unknown',
-                checkoutDate: loan.checkoutDate,
-                dueDate: loan.dueDate,
-                returned: loan.returned || false,
-                returnDate: loan.returnDate || 'Not returned yet',
-            };
+                loansData.push({
+                    loanId: loanDoc.id,
+                    bookName: loan.bookTitle || 'Unknown',
+                    bookId: loan.bookId || 'Unknown',
+                    userName: userDoc.data().name || 'Unknown',
+                    checkoutDate: loan.checkoutDate,
+                    dueDate: loan.dueDate,
+                    returned: loan.returned,
+                    returnDate: loan.returnDate || 'Not returned yet',
+                });
+            });
         });
 
         return res.status(200).json(loansData);
