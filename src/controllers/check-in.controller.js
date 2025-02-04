@@ -14,27 +14,27 @@ async function checkInBook(req, res) {
                 const { googleBookId, userName } = loan;
 
                 if (!googleBookId || !userName) {
-                    throw new Error(`Invalid loan data: ${JSON.stringify(loan)}`);
+                    return res.status(400).json({ message: `Invalid loan data: ${JSON.stringify(loan)}` });
                 }
 
                 const userRef = db.collection('users').where('name', '==', userName);
                 const userSnapshot = await transaction.get(userRef);
                 if (userSnapshot.empty) {
-                    throw new Error(`User ${userName} not found.`);
+                    return res.status(404).json({ message: `User ${userName} not found.` });
                 }
                 const userDoc = userSnapshot.docs[0];
 
                 const bookRef = db.collection('books').where('bookId', '==', googleBookId);
                 const bookSnapshot = await transaction.get(bookRef);
                 if (bookSnapshot.empty) {
-                    throw new Error(`Book with Google Book ID ${googleBookId} not found.`);
+                    return res.status(404).json({ message: `Book with Google Book ID ${googleBookId} not found.` });
                 }
                 const bookDoc = bookSnapshot.docs[0];
 
                 const loanRef = userDoc.ref.collection('loans').where('bookId', '==', googleBookId).where('returned', '==', false);
                 const loanSnapshot = await transaction.get(loanRef);
                 if (loanSnapshot.empty) {
-                    throw new Error(`No active loan found for book ID ${googleBookId} and user ${userName}.`);
+                    return res.status(404).json({ message: `No active loan found for book ID ${googleBookId} and user ${userName}.` });
                 }
 
                 loanSnapshot.docs.forEach(doc => {
